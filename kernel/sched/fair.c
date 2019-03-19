@@ -6800,10 +6800,22 @@ static inline unsigned int hmp_best_little_cpu(struct task_struct *tsk,
 	struct hmp_domain *hmp;
 	struct cpumask allowed_hmp_cpus;
 
+<<<<<<< HEAD
 	if (hmp_cpu_is_slowest(cpu))
 		hmp = hmp_cpu_domain(cpu);
 	else
 		hmp = hmp_slower_domain(cpu);
+=======
+	while ((se = READ_ONCE(cfs_rq->h_load_next)) != NULL) {
+		load = cfs_rq->h_load;
+		load = div64_ul(load * se->avg.load_avg,
+			cfs_rq_load_avg(cfs_rq) + 1);
+		cfs_rq = group_cfs_rq(se);
+		cfs_rq->h_load = load;
+		cfs_rq->last_h_load_update = now;
+	}
+}
+>>>>>>> e15f3c34844e... sched/fair: Do not re-read ->h_load_next during hierarchical load calculation
 
 #ifdef CONFIG_SCHED_SKIP_CORE_SELECTION_MASK
 	cpumask_xor(&allowed_hmp_cpus, &hmp->cpus,
