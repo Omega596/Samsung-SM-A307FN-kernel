@@ -281,8 +281,12 @@ enum
 	LINUX_MIB_TCPKEEPALIVE,			/* TCPKeepAlive */
 	LINUX_MIB_TCPMTUPFAIL,			/* TCPMTUPFail */
 	LINUX_MIB_TCPMTUPSUCCESS,		/* TCPMTUPSuccess */
+<<<<<<< HEAD
 	LINUX_MIB_TCPRACECNDREQSK,		/* TCPRaceCondInReqsk */
 	LINUX_MIB_TCPRACECNDREQSKDROP,		/* TCPRaceCondInReqskDrop */
+=======
+	LINUX_MIB_TCPWQUEUETOOBIG,		/* TCPWqueueTooBig */
+>>>>>>> ad472d3a9483... tcp: tcp_fragment() should apply sane memory limits
 	__LINUX_MIB_MAX
 };
 
