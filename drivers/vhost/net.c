@@ -294,67 +294,10 @@ static void vhost_zerocopy_callback(struct ubuf_info *ubuf, bool success)
 	rcu_read_unlock_bh();
 }
 
-static inline unsigned long busy_clock(void)
+static bool vhost_exceeds_weight(int pkts, int total_len)
 {
-	return local_clock() >> 10;
-}
-
-static bool vhost_can_busy_poll(struct vhost_dev *dev,
-				unsigned long endtime)
-{
-	return likely(!need_resched()) &&
-	       likely(!time_after(busy_clock(), endtime)) &&
-	       likely(!signal_pending(current)) &&
-	       !vhost_has_work(dev);
-}
-
-static void vhost_net_disable_vq(struct vhost_net *n,
-				 struct vhost_virtqueue *vq)
-{
-	struct vhost_net_virtqueue *nvq =
-		container_of(vq, struct vhost_net_virtqueue, vq);
-	struct vhost_poll *poll = n->poll + (nvq - n->vqs);
-	if (!vq->private_data)
-		return;
-	vhost_poll_stop(poll);
-}
-
-static int vhost_net_enable_vq(struct vhost_net *n,
-				struct vhost_virtqueue *vq)
-{
-	struct vhost_net_virtqueue *nvq =
-		container_of(vq, struct vhost_net_virtqueue, vq);
-	struct vhost_poll *poll = n->poll + (nvq - n->vqs);
-	struct socket *sock;
-
-	sock = vq->private_data;
-	if (!sock)
-		return 0;
-
-	return vhost_poll_start(poll, sock->file);
-}
-
-static int vhost_net_tx_get_vq_desc(struct vhost_net *net,
-				    struct vhost_virtqueue *vq,
-				    struct iovec iov[], unsigned int iov_size,
-				    unsigned int *out_num, unsigned int *in_num)
-{
-	unsigned long uninitialized_var(endtime);
-	int r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
-				  out_num, in_num, NULL, NULL);
-
-	if (r == vq->num && vq->busyloop_timeout) {
-		preempt_disable();
-		endtime = busy_clock() + vq->busyloop_timeout;
-		while (vhost_can_busy_poll(vq->dev, endtime) &&
-		       vhost_vq_avail_empty(vq->dev, vq))
-			cpu_relax_lowlatency();
-		preempt_enable();
-		r = vhost_get_vq_desc(vq, vq->iov, ARRAY_SIZE(vq->iov),
-				      out_num, in_num, NULL, NULL);
-	}
-
-	return r;
+	return total_len >= VHOST_NET_WEIGHT ||
+	       pkts >= VHOST_NET_PKT_WEIGHT;
 }
 
 /* Expects to be always run from workqueue - which acts as
@@ -481,8 +424,7 @@ static void handle_tx(struct vhost_net *net)
 			vhost_zerocopy_signal_used(net, vq);
 		total_len += len;
 		vhost_net_tx_packet(net);
-		if (unlikely(total_len >= VHOST_NET_WEIGHT) ||
-		    unlikely(++sent_pkts >= VHOST_NET_PKT_WEIGHT)) {
+		if (unlikely(vhost_exceeds_weight(++sent_pkts, total_len))) {
 			vhost_poll_queue(&vq->poll);
 			break;
 		}
@@ -748,8 +690,7 @@ static void handle_rx(struct vhost_net *net)
 		if (unlikely(vq_log))
 			vhost_log_write(vq, vq_log, log, vhost_len);
 		total_len += vhost_len;
-		if (unlikely(total_len >= VHOST_NET_WEIGHT) ||
-		    unlikely(++recv_pkts >= VHOST_NET_PKT_WEIGHT)) {
+		if (unlikely(vhost_exceeds_weight(++recv_pkts, total_len))) {
 			vhost_poll_queue(&vq->poll);
 			goto out;
 		}
