@@ -74,10 +74,15 @@
 			   ARM_SMCCC_SMC_32,				\
 			   0, 1)
 
+<<<<<<< HEAD
 #define ARM_SMCCC_ARCH_WORKAROUND_1					\
 	ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL,				\
 			   ARM_SMCCC_SMC_32,				\
 			   0, 0x8000)
+#ifndef __ASSEMBLY__
+
+#include <linux/linkage.h>
+#include <linux/types.h>
 
 /**
  * struct arm_smccc_res - Result from SMC/HVC call
@@ -263,4 +268,5 @@ asmlinkage void arm_smccc_hvc(unsigned long a0, unsigned long a1,
  */
 #define arm_smccc_1_1_hvc(...)	__arm_smccc_1_1(SMCCC_HVC_INST, __VA_ARGS__)
 
+#endif /*__ASSEMBLY__*/
 #endif /*__LINUX_ARM_SMCCC_H*/
