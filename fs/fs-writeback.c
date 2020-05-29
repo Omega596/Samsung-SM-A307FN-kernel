@@ -1069,13 +1069,6 @@ static void redirty_tail_locked(struct inode *inode, struct bdi_writeback *wb)
 static void redirty_tail(struct inode *inode, struct bdi_writeback *wb)
 {
 	spin_lock(&inode->i_lock);
-	__redirty_tail(inode, wb);
-	spin_unlock(&inode->i_lock);
-}
-
-static void redirty_tail(struct inode *inode, struct bdi_writeback *wb)
-{
-	spin_lock(&inode->i_lock);
 	redirty_tail_locked(inode, wb);
 	spin_unlock(&inode->i_lock);
 }
