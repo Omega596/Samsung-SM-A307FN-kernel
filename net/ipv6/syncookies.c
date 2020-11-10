@@ -156,7 +156,7 @@ struct sock *cookie_v6_check(struct sock *sk, struct sk_buff *skb)
 	__u32 cookie = ntohl(th->ack_seq) - 1;
 	struct sock *ret = sk;
 	struct request_sock *req;
-	int mss;
+	int full_space, mss;
 	struct dst_entry *dst;
 	__u8 rcv_wscale;
 
@@ -272,6 +272,7 @@ struct sock *cookie_v6_check(struct sock *sk, struct sk_buff *skb)
 	}
 
 	req->rsk_window_clamp = tp->window_clamp ? :dst_metric(dst, RTAX_WINDOW);
+<<<<<<< HEAD
 #ifdef CONFIG_MPTCP
 	tp->ops->select_initial_window(tcp_full_space(sk), req->mss,
 				       &req->rcv_wnd, &req->window_clamp,
@@ -279,6 +280,15 @@ struct sock *cookie_v6_check(struct sock *sk, struct sk_buff *skb)
 				       dst_metric(dst, RTAX_INITRWND), sk);
 #else
 	tcp_select_initial_window(tcp_full_space(sk), req->mss,
+=======
+	/* limit the window selection if the user enforce a smaller rx buffer */
+	full_space = tcp_full_space(sk);
+	if (sk->sk_userlocks & SOCK_RCVBUF_LOCK &&
+	    (req->rsk_window_clamp > full_space || req->rsk_window_clamp == 0))
+		req->rsk_window_clamp = full_space;
+
+	tcp_select_initial_window(full_space, req->mss,
+>>>>>>> 36d7b99b7a7d... net: Update window_clamp if SOCK_RCVBUF is set
 				  &req->rsk_rcv_wnd, &req->rsk_window_clamp,
 				  ireq->wscale_ok, &rcv_wscale,
 				  dst_metric(dst, RTAX_INITRWND));
